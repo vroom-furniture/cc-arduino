@@ -15,7 +15,7 @@
 const byte address[][13] = {"00001", "00002"};
 const char *ssid = "Niels";
 const char *password = "cdh@1686!";
-const char *mqtt_server = "iot.eclipse.org";
+const char *mqtt_server = "178.128.254.40";
 const size_t capacity = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(1) + 30;
 
 DynamicJsonBuffer jsonBuffer(capacity);
@@ -107,6 +107,7 @@ void callback(char *topic, byte *payload, unsigned int length)
         }
 
         Serial.println(response);
+        client.publish("table/status", movement);
     }
 }
 
