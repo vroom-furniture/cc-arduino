@@ -7,7 +7,6 @@
 * Library: TMRh20/RF24, https://github.com/tmrh20/RF24/
 */
 
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include "src/Nrf/Nrf.h"
@@ -16,9 +15,7 @@ const byte address[][13] = {"00001", "00002"};
 const char *ssid = "Niels";
 const char *password = "cdh@1686!";
 const char *mqtt_server = "178.128.254.40";
-const size_t capacity = JSON_ARRAY_SIZE(2) + JSON_OBJECT_SIZE(1) + 30;
 
-DynamicJsonBuffer jsonBuffer(capacity);
 RF24 rfradio(0, 2); // CE, CSN
 Nrf nrf(&rfradio);
 WiFiClient espClient;
@@ -68,22 +65,33 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.print(topic);
     Serial.print("] ");
 
+    char movements[length * sizeof(char)];
+    int num = 1;
+
     for (int i = 0; i < length; i++)
     {
-        Serial.print((char)payload[i]);
+        char temp = (char)payload[i];
+
+        if (temp == ';')
+        {
+            num = num + 1;
+        }
+
+        movements[i] = temp;
     }
-    Serial.println();
 
-    JsonObject &root = jsonBuffer.parseObject(payload);
-
-    for (int i = 0; i < root["movements"].size(); i++)
+    for (int i = 0; i < 2; i++)
     {
         Serial.println(i);
-        const char *movement = root["movements"][i];
+        String strMovement = split(movements, ';', i);
+
+        char movement[sizeof(strMovement)] = "";
+        strMovement.toCharArray(movement, sizeof(strMovement));
+
         nrf.sendMessage(movement, 32);
 
         bool done = false;
-        char response[] = "";
+        char response[32] = "";
 
         // Send movements
         unsigned long started_waiting_at = millis();
@@ -109,6 +117,24 @@ void callback(char *topic, byte *payload, unsigned int length)
         Serial.println(response);
         client.publish("table/status", movement);
     }
+}
+
+String split(String data, char separator, int index)
+{
+    int found = 0;
+    int strIndex[] = {0, -1};
+    int maxIndex = data.length() - 1;
+
+    for (int i = 0; i <= maxIndex && found <= index; i++)
+    {
+        if (data.charAt(i) == separator || i == maxIndex)
+        {
+            found++;
+            strIndex[0] = strIndex[1] + 1;
+            strIndex[1] = (i == maxIndex) ? i + 1 : i;
+        }
+    }
+    return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
 void reconnect()

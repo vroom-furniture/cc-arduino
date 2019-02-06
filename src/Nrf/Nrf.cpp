@@ -6,7 +6,7 @@ Nrf::Nrf(RF24 *rfradio)
     radio = rfradio;
 }
 
-void Nrf::readMessage(void* message)
+void Nrf::readMessage(char* message)
 {
     if (radio->available())
     {
